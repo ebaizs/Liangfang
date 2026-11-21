@@ -310,8 +310,9 @@ aria-label="当前左手操作，点击切换到右手">左手</button>
     <button class="iconbtn" id="openGallery" title="照片库"><img alt="" src="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyNCAyNCIgZmlsbD0ibm9uZSIgc3Ryb2tlPSIjZTllZGY1IiBzdHJva2Utd2lkdGg9IjIiIHN0cm9rZS1saW5lY2FwPSJyb3VuZCIgc3Ryb2tlLWxpbmVqb2luPSJyb3VuZCI+PHJlY3QgeD0iMyIgeT0iNCIgd2lkdGg9IjE4IiBoZWlnaHQ9IjE2IiByeD0iMiIvPjxjaXJjbGUgY3g9IjguNSIgY3k9IjkiIHI9IjEuNSIvPjxwYXRoIGQ9Im0yMSAxNS01LTVMNSAyMCIvPjwvc3ZnPg=="></button>
     <button class="iconbtn photo-bt-button" id="btConnect" type="button" title="连接蓝牙测距仪" aria-label="蓝牙测距" aria-pressed="false"><svg viewBox="0 0 24 24" width="19" height="19" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6.5 6.5 17.5 17.5 12 23 12 1 17.5 6.5 6.5 17.5"></polyline></svg></button>
     <button class="iconbtn" id="settingsBtn" title="设置"><img alt="" src="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyNCAyNCIgZmlsbD0ibm9uZSIgc3Ryb2tlPSIjZTllZGY1IiBzdHJva2Utd2lkdGg9IjIiIHN0cm9rZS1saW5lY2FwPSJyb3VuZCIgc3Ryb2tlLWxpbmVqb2luPSJyb3VuZCI+PGNpcmNsZSBjeD0iMTIiIGN5PSIxMiIgcj0iMyIvPjxwYXRoIGQ9Im0xOS40IDE1IC4xLjEgMS40IDEuMS0xLjQgMi40LTEuNy0uNmE4IDggMCAwIDEtMS43IDFsLS4zIDEuOGgtMi44bC0uMy0xLjhhOCA4IDAgMCAxLTEuNy0xbC0xLjcuNi0xLjQtMi40IDEuNC0xLjFhNyA3IDAgMCAxIDAtMmwtMS40LTEuMSAxLjQtMi40IDEuNy42YTggOCAwIDAgMSAxLjctMWwuMy0xLjhoMi44bC4zIDEuOGE4IDggMCAwIDEgMS43IDFsMS43LS42IDEuNCAyLjQtMS40IDEuMWE3IDcgMCAwIDEgMCAyWiIvPjwvc3ZnPg=="></button>
-    <button class="iconbtn" id="undoBottom" title="撤销"><img alt="" src="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyNCAyNCIgZmlsbD0ibm9uZSIgc3Ryb2tlPSIjZTllZGY1IiBzdHJva2Utd2lkdGg9IjIuMiIgc3Ryb2tlLWxpbmVjYXA9InJvdW5kIiBzdHJva2UtbGluZWpvaW49InJvdW5kIj48cGF0aCBkPSJNOSAxNCA0IDlsNS01Ii8+PHBhdGggZD0iTTQgOWgxMGE2IDYgMCAwIDEgMCAxMmgtMiIvPjwvc3ZnPg=="></button>
-    <button class="iconbtn" id="redoBottom" title="恢复"><img alt="" src="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyNCAyNCIgZmlsbD0ibm9uZSIgc3Ryb2tlPSIjZTllZGY1IiBzdHJva2Utd2lkdGg9IjIuMiIgc3Ryb2tlLWxpbmVjYXA9InJvdW5kIiBzdHJva2UtbGluZWpvaW49InJvdW5kIj48cGF0aCBkPSJtMTUgMTQgNS01LTUtNSIvPjxwYXRoIGQ9Ik0yMCA5SDEwYTYgNiAwIDAgMCAwIDEyaDIiLz48L3N2Zz4="></button>
+    <button type="button" class="iconbtn" id="photoUndo" title="撤销标注" aria-label="撤销标注">↶</button>
+    <button type="button" class="iconbtn" id="photoRedo" title="恢复标注" aria-label="恢复标注">↷</button>
+    <button id="returnMeasureBtn" class="return-measure-btn" type="button">返回量房</button>
     <button class="iconbtn" id="saveBtn" title="保存"><img alt="" src="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyNCAyNCIgZmlsbD0ibm9uZSIgc3Ryb2tlPSIjZTllZGY1IiBzdHJva2Utd2lkdGg9IjIiIHN0cm9rZS1saW5lY2FwPSJyb3VuZCIgc3Ryb2tlLWxpbmVqb2luPSJyb3VuZCI+PHBhdGggZD0iTTQgM2gxM2w0IDR2MTRIM1YzeiIvPjxwYXRoIGQ9Ik03IDN2NmgxMFYzTTcgMjF2LThoMTB2OCIvPjwvc3ZnPg=="></button>
   </div>
 </header>
@@ -323,7 +324,6 @@ aria-label="当前左手操作，点击切换到右手">左手</button>
   <button class="fontbtn active" data-size="1.2">中</button>
   <button class="fontbtn" data-size="1">小</button>
 </div>
-  <button id="returnMeasureBtn" class="return-measure-btn" type="button">返回量房</button>
 </div>
 <main class="stage" id="stage">
   <div class="empty" id="empty"><strong>照片尺寸标注</strong>拍摄现场照片，或从相册选择照片<br>选择「长度」后，在照片上点击两个端点</div>
@@ -363,7 +363,7 @@ aria-label="当前左手操作，点击切换到右手">左手</button>
 
 </nav>
 <input id="cameraInput" type="file" accept="image/*" capture="environment" class="hidden">
-<input id="albumInput" type="file" accept="image/*" multiple class="hidden">
+<input id="albumInput" type="file" accept="image/*" multiple aria-label="选择相册照片" style="position:fixed;left:-10000px;top:0;width:1px;height:1px;opacity:0.01;">
 <div id="toast" class="toast" role="status" aria-live="polite"></div>
 <div class="camera-modal" id="cameraModal">
  <div class="camera-card">

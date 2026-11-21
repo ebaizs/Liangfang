@@ -1522,13 +1522,9 @@ function wallDraw(w,i){
   const L=w.len||dist(w.a,w.b)||1;
   const att=S.items.filter(it=>it.wall===i&&types[it.type]);
   // 只有门窗类构件才留洞，电箱是不留洞的
-  const gaps=att.filter(it=>['opening','window','bay'].includes(it.type)).map(it=>({
-    l:Math.max(0,it.t-(it.width/2)/L)*scrLen,
-    r:Math.min(scrLen,it.t+(it.width/2)/L)*scrLen,
-    it
-  })).filter(g=>g.r>g.l);
-  // 柱、烟道仅作为叠加构件绘制，不切断原始墙线，移动后墙线保持完整。
-  gaps.sort((a,b)=>a.l-b.l);
+  // 所有构件（包括门洞、入户门、窗、飘窗、电箱）均为墙线上的叠加图形。
+  // 不再按构件宽度留白；墙体基础线始终完整绘制，避免移动/删除后出现断线。
+  const gaps=[];
 
   const drawRange=(t0,t1)=>{
     if(t1-t0<1e-6)return;
@@ -4013,13 +4009,62 @@ if(hitEntryDoor(p)){
     roomPanel();
     return;
   }
-  if(tool==='arc'){
-    const snap=nearestEndpoint(p);
-    // 已有墙线/弧线时，只有落入端点吸附范围才开始弧墙；空白处拖动改为平移画布
-    if(S.walls.length>0&&!snap){pan={p,last:p,origin:{...origin}};return;}
-    draft={kind:'arc',a:snap?{...snap}:world(p),b:null,bulge:0};
+
+if(tool==='arc'){
+    // 弧形墙采用两次点击模式，不使用拖动和连续绘制。
+    // 第一次点击：选择红圈标记的起点。
+    if(!draft || draft.kind!=='arc'){
+      const snap=nearestWallAnchor(
+        p,
+        null,
+        24/Math.max(scale,0.001)
+      );
+
+      if(!snap){
+        showToast('请先点击红圈标记的门侧端点或未闭合墙线端点');
+        return;
+      }
+
+      draft={
+        kind:'arc',
+        a:{...snap},
+        b:null,
+        bulge:0,
+        arcSecondPoint:false
+      };
+
+      draw();
+      showToast('弧形墙起点已确定，请点击另一个红圈端点');
+      return;
+    }
+
+    // 第二次点击：选择另一个红圈端点。
+    const end=nearestWallAnchor(
+      p,
+      draft.a,
+      24/Math.max(scale,0.001)
+    );
+
+    if(!end){
+      showToast('请点击另一个红圈标记的端点');
+      return;
+    }
+
+    if(dist(draft.a,end)<=50){
+      showToast('弧形墙的两个端点距离太近，请重新选择');
+      return;
+    }
+
+    draft.b={...end};
+    draft.near={...end};
+    draft.arcSecondPoint=true;
+    draft.bulge=dist(draft.a,end)*0.2;
+
+    draw();
+    showToast('两个端点已确定，请设置弧形墙矢高和墙厚');
     return;
-  }
+}
+
 
   if(tool==='select'){
     if(selectedText>=0&&S.texts[selectedText]){
@@ -4313,9 +4358,14 @@ function onMove(e){
     return;
   }
 
-  if(draft){
+ if(draft){
     // 绘图过程中锁定画布位置，禁止自动跟随移动。
-    // 只更新绘图终点，不改变画布坐标。
+
+    if(draft.kind==='arc'){
+        // 弧形墙使用两次点击确定端点。
+        return;
+    }
+
     const q=world(p);
     let target=q;
     if(draft.kind==='pointPlace'){
@@ -4487,15 +4537,40 @@ async function onUp(e){
         }
       }
       draw();
-    }else if(d.kind==='arc'){
-      const end = d.near ? {...d.near} : d.b;
-      if(end && dist(d.a,end)>50){
-        pending={a:{...d.a},b:{...end}};
-        arcPanel();
-      }else{
-        if(d.near) alert('弧墙起点与终点重合，无法生成弧线；请拉开距离或选择其他端点。');
+    
+}else if(d.kind==='arc'){
+
+      // 第一次点击结束时，只保留起点，等待第二次点击。
+      if(!d.arcSecondPoint || !d.b){
+        draft=d;
         draw();
+        showToast('起点已确定，请继续点击另一个红圈端点');
+        return;
       }
+
+      // 第二次点击完成，进入弧形墙参数设置。
+      const end={...d.b};
+
+      if(dist(d.a,end)>50){
+
+        pending={
+          a:{...d.a},
+          b:{...end},
+          bulge:dist(d.a,end)*0.2,
+          thick:S.defaultWallThick||220
+        };
+
+        arcPanel();
+
+      }else{
+
+        draft=null;
+        pending=null;
+        draw();
+        showToast('弧形墙两个端点距离太近，请重新操作');
+
+      }
+
 }else if(d.axisNear){
   // 对齐点松开后先进入尺寸确认，必须按数字键盘确认才真正创建墙线。
   const hint={axis:d.axisNear.axis,point:{x:d.axisNear.point.x,y:d.axisNear.point.y}};
@@ -5223,10 +5298,15 @@ document.addEventListener('keydown',e=>{
 });
 
 const undoTopBtn=$('undo'),redoTopBtn=$('redo'),undoBottomBtn=$('undoBottom'),redoBottomBtn=$('redoBottom');
-if(undoTopBtn)undoTopBtn.onclick=e=>{e.preventDefault();e.stopPropagation();undoAction();};
-if(redoTopBtn)redoTopBtn.onclick=e=>{e.preventDefault();e.stopPropagation();redoAction();};
-if(undoBottomBtn)undoBottomBtn.onclick=e=>{e.preventDefault();e.stopPropagation();undoAction();};
-if(redoBottomBtn)redoBottomBtn.onclick=e=>{e.preventDefault();e.stopPropagation();redoAction();};
+function bindHistoryButton(btn,action){
+  if(!btn)return;
+  btn.type='button';
+  // Capture click at the button itself; stop bubbling so other page modules cannot replace/intercept it.
+  btn.addEventListener('click',e=>{e.preventDefault();e.stopImmediatePropagation();action();},{capture:true});
+  btn.addEventListener('pointerup',e=>{if(e.pointerType==='touch'){e.preventDefault();e.stopPropagation();}},{passive:false});
+}
+bindHistoryButton(undoTopBtn,undoAction);bindHistoryButton(redoTopBtn,redoAction);
+bindHistoryButton(undoBottomBtn,undoAction);bindHistoryButton(redoBottomBtn,redoAction);
 $('clearAll').onclick=clearAll;
 
 function fitCanvas(){
@@ -5588,7 +5668,7 @@ $('menu').onclick=()=>{
   // 导入 JSON：支持文件以及参考模块导出的 {state:{...}} 包装格式。
   const chooseJSONFile=()=>{
     const fileInput=document.createElement('input');
-    fileInput.type='file';fileInput.accept='.json,application/json';
+    fileInput.type='file';fileInput.accept='.json,application/json';fileInput.style.cssText='position:fixed;left:-10000px;top:0;width:1px;height:1px;opacity:.01;';document.body.appendChild(fileInput);
     fileInput.onchange=e=>{
       const file=e.target.files&&e.target.files[0];if(!file)return;
       const reader=new FileReader();
@@ -5598,14 +5678,14 @@ $('menu').onclick=()=>{
           if(!jsonText)throw new Error('文件内容为空');
           await importJSONData(jsonText,file.name.replace(/\.json$/i,''));
         }catch(err){console.error('JSON导入失败',err);await LinuoDialog.show('JSON 导入失败',err.message||'文件格式不正确');}
-        fileInput.value='';
+        fileInput.value='';fileInput.remove();
       };
-      reader.onerror=()=>alert('JSON文件读取失败');
+      reader.onerror=()=>{alert('JSON文件读取失败');fileInput.remove();};
       reader.readAsText(file,'utf-8');
     };
     fileInput.click();
   };
-  btnImp.onclick=chooseJSONFile;
+  btnImp.onclick=e=>{e.preventDefault();e.stopPropagation();chooseJSONFile();};
   // 当前菜单使用动态创建的导入按钮；不存在的旧版 jsonImport 元素不再引用，避免中断后续导出按钮绑定。
 
 

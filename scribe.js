@@ -999,16 +999,15 @@ function getEntryInsideSide(){
       env.setState(next);
       env.normalizeLegacyItems();
       const S=getState();
-      // 门洞连接线由当前墙线、宽度、位置重新计算，避免旧文件内缓存点位失效。
+      // 导入只恢复数据，不运行旧版门洞桥接线/全局求交算法；这两项会改写墙数组，
+      // 造成导入后墙线被拆段、构件索引错位甚至出现空白。构件仅保留附着引用与参数。
       (S.walls||[]).forEach(w=>{if(w&&Object.prototype.hasOwnProperty.call(w,'openingHostKey'))delete w.openingHostKey;});
       (S.items||[]).forEach(it=>{
-        if(it.type!=='opening')return;
-        if(!it._openingKey)it._openingKey='opening_import_'+Date.now()+'_'+Math.random().toString(36).slice(2,7);
-        env.syncOpeningBridgeLine(it);
+        if(!it||typeof it!=='object')return;
+        if(it.type==='opening'&&!it._openingKey)it._openingKey='opening_import_'+Date.now()+'_'+Math.random().toString(36).slice(2,7);
+        if(Number.isInteger(it.wall)&&it.wall>=S.walls.length)it.wall=-1;
+        if(Number.isInteger(it.attachedWall)&&it.attachedWall>=S.walls.length)it.attachedWall=-1;
       });
-      env.splitAllWallIntersections();
-      // 墙体求交后会重映射门洞所属墙段，重新生成门洞端点连线，避免导入后出现旧坐标。
-      (S.items||[]).forEach(it=>{if(it.type==='opening')env.syncOpeningBridgeLine(it);});
       env.clearWallChain();
       env.resetImportInteraction();
       if($('heightInp'))$('heightInp').value=S.height;
@@ -1516,14 +1515,17 @@ async function machineCode(){const ua=navigator.userAgent||'',platform=navigator
 async function sign(code){const key=await crypto.subtle.importKey('raw',new TextEncoder().encode(SECRET),{name:'HMAC',hash:'SHA-256'},false,['sign']);return hex(await crypto.subtle.sign('HMAC',key,new TextEncoder().encode(code))).slice(0,32)}
 async function verify(code,machine){const expected='LN1-'+await sign(machine);return String(code||'').trim().toUpperCase()===expected}
 function showGate(message){
- const gate=$('licenseGate');if(!gate)return;
+ const gate=$('licenseGate');if(!gate)return false;
+ // 授权层固定挂到 body 顶层，避免被设置面板/图片标记页的层叠上下文遮挡。
+ if(gate.parentElement!==document.body)document.body.appendChild(gate);
  const canClose=!message; // 仅从管理设置主动打开的授权信息窗口可关闭；试用到期锁定窗口不可关闭。
- gate.hidden=false;
+ gate.hidden=false;gate.style.display='flex';gate.style.visibility='visible';gate.style.pointerEvents='auto';gate.style.zIndex='2147483000';
  gate.innerHTML=`<div class="license-card" style="position:relative">${canClose?'<button type="button" id="closeLicenseGate" aria-label="关闭" style="position:absolute;right:10px;top:8px;width:30px;height:30px;border:0;border-radius:8px;background:#edf2f8;color:#34445d;font-size:22px;line-height:1;cursor:pointer">×</button>':''}<h2>立诺量房 · 软件授权</h2><p>${message||'免费试用次数已用完，请联系软件作者获取授权码。'}</p><b style="font-size:12px">本设备机器码</b><div class="license-machine" id="licenseMachineText"></div><button type="button" id="copyMachine">复制机器码</button><input id="licenseCodeInput" autocomplete="off" autocapitalize="characters" placeholder="请输入授权码"><button class="primary" type="button" id="activateLicense">验证并激活</button><p id="licenseError" style="color:#dc2626"></p></div>`;
- $('licenseMachineText').textContent=state.machineCode;
- if(canClose)$('closeLicenseGate').onclick=()=>{gate.hidden=true;};
- $('copyMachine').onclick=()=>navigator.clipboard?.writeText(state.machineCode).then(()=>{$('licenseError').style.color='#15803d';$('licenseError').textContent='机器码已复制'}).catch(()=>{$('licenseError').textContent='请长按机器码复制'});
- $('activateLicense').onclick=async()=>{const v=$('licenseCodeInput').value.trim();if(await verify(v,state.machineCode)){localStorage.setItem(CODE_KEY,v.toUpperCase());state.activated=true;gate.hidden=true;renderStatus();}else{$('licenseError').textContent='授权码不正确，或不是本设备的授权码';}};
+ $('licenseMachineText').textContent=state.machineCode||'正在生成本设备机器码…';
+ if(canClose)$('closeLicenseGate').onclick=()=>{gate.hidden=true;gate.style.display='none';};
+ $('copyMachine').onclick=()=>{const value=state.machineCode||'';if(!value){$('licenseError').textContent='机器码尚未生成，请使用 HTTPS 安全网页环境后重试';return;}if(navigator.clipboard?.writeText){navigator.clipboard.writeText(value).then(()=>{$('licenseError').style.color='#15803d';$('licenseError').textContent='机器码已复制'}).catch(()=>{$('licenseError').textContent='请长按机器码复制'});}else{$('licenseError').textContent='请长按机器码复制';}};
+ $('activateLicense').onclick=async()=>{const v=$('licenseCodeInput').value.trim();try{if(!state.machineCode)throw new Error('当前浏览器无法生成安全机器码，请通过 HTTPS 打开程序后重试');if(await verify(v,state.machineCode)){localStorage.setItem(CODE_KEY,v.toUpperCase());state.activated=true;gate.hidden=true;gate.style.display='none';renderStatus();}else{$('licenseError').textContent='授权码不正确，或不是本设备的授权码';}}catch(err){$('licenseError').textContent=err.message||'授权验证失败，请稍后重试';}};
+ return true;
 }
 function renderStatus(){const el=document.querySelector('[data-license-status]');if(el)el.textContent=state.activated?'永久授权已激活':`试用剩余 ${state.remaining} 次`;}
 async function init(){
@@ -1549,6 +1551,11 @@ async function init(){
  if(!state.activated){if(launches<FREE_LIMIT){launches++;localStorage.setItem(COUNT_KEY,String(launches));state.launches=launches;state.remaining=FREE_LIMIT-launches;}else{state.remaining=0;showGate('免费启动次数已达到200次。请输入与本设备机器码绑定的授权码后继续使用。');}}
  renderStatus();
 }
-window.LinuoLicense={getStatus:()=>({...state}),showActivation:()=>showGate(),init};
-init();
+let licenseInitPromise=null;
+window.LinuoLicense={
+ getStatus:()=>({...state}),
+ showActivation:()=>{try{showGate();if(!state.machineCode){const el=$('licenseMachineText');if(el)el.textContent='正在生成本设备机器码…';if(!licenseInitPromise)licenseInitPromise=init();licenseInitPromise.then(()=>{const target=$('licenseMachineText');if(target)target.textContent=state.machineCode||(state.skipLicense?'当前浏览器不支持安全机器码生成，请通过 HTTPS 打开程序':'机器码生成失败');}).catch(err=>{const target=$('licenseMachineText');if(target)target.textContent='机器码生成失败：'+(err.message||'未知错误');});}}catch(err){console.error('[授权信息] 打开失败',err);const gate=$('licenseGate');if(gate){gate.hidden=false;gate.style.display='flex';gate.textContent='授权信息打开失败：'+(err.message||'未知错误');}}},
+ init:()=>licenseInitPromise||(licenseInitPromise=init())
+};
+licenseInitPromise=init();
 })();

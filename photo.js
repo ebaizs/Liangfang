@@ -21,7 +21,7 @@ function openNumericKeyboard(initialValue='0'){
  return api.openNumericInput({
   value:String(initialValue??'0'),
   onInput:value=>setKeyFromShared(value),
-  onConfirm:value=>{setKeyFromShared(value);confirmNumeric();}
+  onConfirm:value=>{setKeyFromShared(value);confirmNumeric();closeNumericKeyboard();$('valueInput').blur();}
  });
 }
 function closeNumericKeyboard(){const api=sharedInput();if(api&&typeof api.closeNumericInput==='function')api.closeNumericInput();}
@@ -290,7 +290,7 @@ $('captureCamera').onclick=async()=>{
 };
 $('cameraBtn').onclick=()=>openCameraPicker();
 // 文件选择必须在用户点击事件中同步触发；清空 value 可保证重复选择同一张照片也会触发 change。
-$('albumBtn').onclick=()=>{const input=$('albumInput');if(!input)return toast('相册选择控件未加载');input.value='';input.click();};
+$('albumBtn').type='button';$('albumBtn').onclick=e=>{e.preventDefault();e.stopPropagation();const input=$('albumInput');if(!input)return toast('相册选择控件未加载');input.value='';try{input.click()}catch(err){toast('无法打开相册：'+(err.message||err))}};
 $('cameraInput').onchange=e=>loadFile(e.target.files[0]);
 if($('albumInput'))$('albumInput').onchange=async e=>{const files=[...e.target.files];e.target.value='';if(!files.length)return;toast(`正在读取 ${files.length} 张照片…`);for(const f of files)await loadFile(f);};
 function cleanName(n){return (n||'照片').replace(/\.[^.]+$/,'').replace(/[\\/:*?"<>|]/g,'_')}
@@ -528,7 +528,9 @@ $('valueBar').addEventListener('click',()=>{
 $('applyValue').onclick=()=>{if(selected<0)return toast('请先选择一条尺寸线');snapshot();dims[selected].value=$('valueInput').value||'0';render()};
 $('deleteDim').onclick=()=>{if(selected<0)return toast('请先选择尺寸线');snapshot();dims.splice(selected,1);selected=-1;render()};
 $('clearDims').onclick=()=>{if(!dims.length&&!texts.length)return toast('当前没有标注');if(!confirm('确定清空当前照片的全部尺寸和文字标注吗？'))return;snapshot();dims=[];texts=[];selected=-1;pendingDim=null;firstPoint=null;render();toast('已清空全部标注')};
-$('undo').onclick=()=>{if(!history.length)return;redoStack.push(JSON.stringify({dims,texts}));restore(history.pop())};$('redo').onclick=()=>{if(!redoStack.length)return;history.push(JSON.stringify({dims,texts}));restore(redoStack.pop())};
+const photoUndo=$('photoUndo'),photoRedo=$('photoRedo');
+if(photoUndo)photoUndo.onclick=e=>{e.preventDefault();e.stopPropagation();if(!history.length)return toast('没有可撤销的标注');redoStack.push(JSON.stringify({dims,texts}));restore(history.pop());};
+if(photoRedo)photoRedo.onclick=e=>{e.preventDefault();e.stopPropagation();if(!redoStack.length)return toast('没有可恢复的标注');history.push(JSON.stringify({dims,texts}));restore(redoStack.pop());};
 $('addText').onclick=()=>{if(!photo)return toast('请先拍照或从相册选择照片');closeNumericKeyboard();mode='text';textStart=null;pointer=null;selectedText=-1;$('drawBtn').classList.remove('active');$('panBtn').classList.remove('active');$('editBtn').classList.remove('active');$('editPanel').classList.remove('show');$('hint').textContent='文字标注：按住照片上的引线起点并拖动，松开后输入文字';toast('文字工具已启动：拖动设置引线');};
 $('btConnect').onclick=()=>{
  const api=sharedInput();
